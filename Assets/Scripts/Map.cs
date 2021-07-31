@@ -4,37 +4,105 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 using UnityEngine.Assertions;
 
+
+/// <summary>
+/// This class represents a Map. For a 2D game such as this a "map" more accurately refers to the entirety of a tile grid.
+/// 
+/// ASSIGNMENT
+///
+/// The "Map" component is supposed to be added to the top-level "Grid" game object for every level instance. 
+/// Important: The Game Object also has to be called "Grid"! This will be how it will be identified (and the reference loaded) by all other agents etc.
+/// The requirements to this grid GO are the following:
+/// - It has to have a child GO which is called "TilemapGround" and which represents the tilemap of the basic ground tiles.
+///  
+/// PLANNING
+///
+/// he fundamental "map" object representation will be important for many things in the future. A distant goal would be that agents on a map can move through some sort of path finding. 
+/// For this feature the map obviously has to provide info about the boundries of the map and also within it. It should contain some sort of a representation of which tiles have which kind 
+/// of properties such as being traversable or not. But even more than this tiles may need many additional infos in the future such as their temperature (which will be important for the 
+/// core gameplay feature of freezing) damage values for structures etc.
+/// But as of now, these things are in the future. The first goal would be to be able to coherently interact with the map in the form of teleportation. There should be a simple interface for
+/// instantaneously transporting an agent to a certain tile of the map.
+/// </summary>
 public class Map : MonoBehaviour
 {
+    // Z LAYER DEFINITIONS
+    // In Unity, a game is not truly "2D" in reality, the game world is still handled as "3D" but the 2D assets are drawn on planes and the camera is aligned towards looking down onto these 
+    // planes so to say, that it looks like 2D for all intents and purposes. (This is configurable, but for this game) the 2D coordinates are X and Y with the Z coordinate being the "depth" 
+    // or the parallel distance of the planes to each other. If one plane is above the other (from the perspective of the camera) It's contents will appear in the foreground blocking the 
+    // content of the lower layers. Thus it is important to control on which Z layer an element is to control which game elements take priority for overlayering effects.
+    // These constants defined here can be used for the respective families of game elements.
+    public const float AGENT_LAYER = -1.0f;
+    public const float GROUND_LAYER = 0.0f;
+
 
     public Grid BaseGrid;
+
     public int OriginX;
     public int OriginY;
+
+    public int SizeX;
+    public int SizeY;
+    
     public float CellSize;
 
     public Tilemap GroundTilemap;
 
-    // Start is called before the first frame update
-    void Start()
+    // THE INITIALIZATION
+    // This flag signifies if the map has already been initialized. The initialization contains things such as building all necessary internal references and intializing state variable values. 
+    // The very existence of this flag is sort of a hack though. Initialization is usually done in the "Start" method. But for this method it is done in a seperate method "Initialize" which can be 
+    // called externally. This is necessary, because the map instance is needed in many other "Start" methods of agents for example and may throw an error.
+    public bool isInitialized = false;
+
+    public void Initialize()
     {
+        if (!this.isInitialized)
+        {
+            this.ForceInitialize();
+        }
+    }
+
+    public void ForceInitialize()
+    {
+        // -- Loading the Grid
+        // Since this script component is part of the main "Grid" game object of the level instance, this GO also has to have an actual Grid component which is loaded here.
+        // The cell size refers to the size of a single cell/tile! We will make it a hard requirement that this cell size is symmetrical.
         this.BaseGrid = GetComponent<Grid>();
         if (this.BaseGrid.cellSize.x != this.BaseGrid.cellSize.y)
         {
             Debug.LogError("The underlying Grid does not have a symmetric cell size! This should not be the case!");
-        } else
+        }
+        else
         {
             this.CellSize = this.BaseGrid.cellSize.x;
-            Debug.Log(this.CellSize);
         }
-        
-        // REDO this ugly
+
+        // -- Loading the individual tilemaps
+        // The actual tilemap layers are supposed to be *child game objects* of the main grid GO. These are being loaded here. The way this is being done is really ugly, but sadly there are not 
+        // really alternatives. This way of loading the references to the children imposes an additional assumption on the order of the children:
+        // * The Ground tilemap has to be the first child
+
+        // The Ground Tilemap is the most extensive tilemap. It actually has to span the entire map unlike all other tilemaps (they can be missing chunks). This is why we use the ground tilemap 
+        // to determine the things like the size and the point of origin.
         this.GroundTilemap = this.transform.GetChild(0).gameObject.GetComponent<Tilemap>();
-        Vector3 cellPos = this.GroundTilemap.CellToWorld(new Vector3Int(-2, 5, 0));
         this.OriginX = this.GroundTilemap.origin.x;
         this.OriginY = this.GroundTilemap.origin.y;
+        this.SizeX = this.GroundTilemap.cellBounds.size.x;
+        this.SizeY = this.GroundTilemap.cellBounds.size.y;
 
-        Debug.Log(GroundTilemap.cellBounds.size);
-        Debug.Log(GroundTilemap.origin);
+
+        Debug.Log($"TILEMAP SIZE: {GroundTilemap.cellBounds.size}");
+        Debug.Log($"TILEMAP ORIGIN: {GroundTilemap.origin}");
+
+        // At the end we need to set the initialization flag to true such that under normal circumstances, this method is not being called twice!
+        this.isInitialized = true;
+    }
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        // If, miraculously, the initialization has not happened, it has to now.
+        this.Initialize();
     }
 
     public Vector3Int MapToCell(int mapX, int mapY)
