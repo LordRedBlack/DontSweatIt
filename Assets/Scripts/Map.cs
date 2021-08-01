@@ -1,3 +1,4 @@
+// Default Unity:
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -48,6 +49,10 @@ public class Map : MonoBehaviour
 
     public Tilemap GroundTilemap;
 
+    // An instance of a Random object is needed to acquire random numbers. This random instance can potentially also used by other classes which have access to the map instance, but it was 
+    // mainly added to implement the functionality of selecting a random tile of the map.
+    public System.Random random;
+
     // THE INITIALIZATION
     // This flag signifies if the map has already been initialized. The initialization contains things such as building all necessary internal references and intializing state variable values. 
     // The very existence of this flag is sort of a hack though. Initialization is usually done in the "Start" method. But for this method it is done in a seperate method "Initialize" which can be 
@@ -90,9 +95,13 @@ public class Map : MonoBehaviour
         this.SizeX = this.GroundTilemap.cellBounds.size.x;
         this.SizeY = this.GroundTilemap.cellBounds.size.y;
 
-
         Debug.Log($"TILEMAP SIZE: {GroundTilemap.cellBounds.size}");
         Debug.Log($"TILEMAP ORIGIN: {GroundTilemap.origin}");
+
+        // -- Initializing Randomness
+        // For any random numbers etc to be generated, apparently an instance of the "Random" class is needed
+        // https://stackoverflow.com/questions/2706500/how-do-i-generate-a-random-int-number
+        this.random = new System.Random();
 
         // At the end we need to set the initialization flag to true such that under normal circumstances, this method is not being called twice!
         this.isInitialized = true;
@@ -105,16 +114,55 @@ public class Map : MonoBehaviour
         this.Initialize();
     }
 
-    public Vector3Int MapToCell(int mapX, int mapY)
+
+    // == COORDINATE CONVERSIONS
+    // So for a tiled 2D game like this we mainly have to deal with 2 different coordinate systems: The world coordinates are the "actual" absolute coordinates which are used by unity 
+    // internally. These are also 3D, as they also include the z coordinate. But for many things the "map" coordinates are more useful. These are simply the integer 2D coordinates of the 
+    // tiles on the tile grid. Both systems have their use cases so it is important to have means of conversion between those.
+
+    public Vector2Int GetPositionMap(Vector3 positionWorld)
     {
-        return new Vector3Int(this.OriginX + mapX, this.OriginY + mapY, 0);
+        Vector3Int positionMap = this.GroundTilemap.WorldToCell(positionWorld);
+        return new Vector2Int(positionMap.x + this.OriginX, positionMap.y + this.OriginY);
     }
 
-    public Vector3 GetCellCenter(int mapX, int mapY)
+    public Vector2Int GetRandomPositionMap()
     {
-        Vector3Int cellPosition = this.MapToCell(mapX, mapY);
-        Vector3 centerCoordinates = this.GroundTilemap.GetCellCenterWorld(cellPosition);
-        return centerCoordinates;
+        int mapX = this.random.Next(0, this.SizeX);
+        int mapY = this.random.Next(0, this.SizeY);
+        return new Vector2Int(mapX, mapY);
+    }
+
+    /// <summary>
+    /// Given the coordinates of a specific tile of the map, this method will return the corresponding world coordinate vector 
+    /// for the center of that tile.
+    /// </summary>
+    /// <param name="mapX"></param>
+    /// <param name="mapY"></param>
+    /// <returns>The 3D vector of the cell center in world coordinates</returns>
+    public Vector3 GetCellCenterWorld(int mapX, int mapY)
+    {
+        Vector3Int positionCenterMap = new Vector3Int(mapX + this.OriginX, mapY + this.OriginY, 0);
+        Vector3 positionCenterWorld = this.GroundTilemap.GetCellCenterWorld(positionCenterMap);
+        return positionCenterWorld;
+    }
+
+    public Vector3 GetCellCenterWorld(Vector2Int positionMap)
+    {
+        Vector3Int positionCenterMap = new Vector3Int(positionMap.x + this.OriginX, positionMap.y + this.OriginY, 0);
+        Vector3 positionCenterWorld = this.GroundTilemap.GetCellCenterWorld(positionCenterMap);
+        return positionCenterWorld;
+    }
+
+    /// <summary>
+    /// Returns the world coordinate vector of the center of a random tile of the map.
+    /// Note however that this method does not take into account what type of tile this is. It for example does not matter if it is traversible or not.
+    /// </summary>
+    /// <returns>The 3D vector of the cell center in world coordinates</returns>
+    public Vector3 GetRandomCellCenterWorld()
+    {
+        Vector2Int positionMap = this.GetRandomPositionMap();
+        return this.GetCellCenterWorld(positionMap);
     }
 
     // Update is called once per frame
