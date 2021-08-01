@@ -1,0 +1,16 @@
+What are the rough milestones which would be important
+1. Get an agent to walk at all
+2. Get an agent to have actual path finding
+	- Have multiple tilemaps, most importantly a second layer with obstructions.
+	- Figure out how to load all these tiles into the map as an array / matrix
+	- Attach properties to tiles --> These will have to be saved somehow.
+3. Make controllable characters which can be controlled by mouse clicks
+	- Figure out how to click on a tile and have it
+
+
+[x] Primitive Movement
+[x] Movement Queue
+[] Add a second tilemap which contains terrain elements
+[] During the map init, load all tiles as a matrix.
+[] Make a PathFindingAlgorithm Interface, so I can play around with some alternatives.
+[] How to save a map? What are the important aspects to save?
