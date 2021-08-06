@@ -10,7 +10,7 @@ What are the rough milestones which would be important
 
 [x] Primitive Movement
 [x] Movement Queue
-[] Add a second tilemap which contains terrain elements
+[x] Add a second tilemap which contains terrain elements
 [] During the map init, load all tiles as a matrix.
 [] Make a PathFindingAlgorithm Interface, so I can play around with some alternatives.
 [] How to save a map? What are the important aspects to save?

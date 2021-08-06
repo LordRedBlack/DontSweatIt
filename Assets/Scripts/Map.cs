@@ -6,6 +6,22 @@ using UnityEngine.Tilemaps;
 using UnityEngine.Assertions;
 
 
+public class Tile
+{
+    public bool isTraversable;
+
+    public Tile(bool isTraversable)
+    {
+        this.isTraversable = isTraversable;
+    }
+
+    public override string ToString()
+    {
+        return $"TILE(isTraversable={this.isTraversable})";
+    }
+}
+
+
 /// <summary>
 /// This class represents a Map. For a 2D game such as this a "map" more accurately refers to the entirety of a tile grid.
 /// 
@@ -48,6 +64,10 @@ public class Map : MonoBehaviour
     public float CellSize;
 
     public Tilemap GroundTilemap;
+    public Tilemap TerrainTilemap;
+
+    // 2D TILE ARRAY
+    public Tile[,] tiles;
 
     // An instance of a Random object is needed to acquire random numbers. This random instance can potentially also used by other classes which have access to the map instance, but it was 
     // mainly added to implement the functionality of selecting a random tile of the map.
@@ -95,13 +115,30 @@ public class Map : MonoBehaviour
         this.SizeX = this.GroundTilemap.cellBounds.size.x;
         this.SizeY = this.GroundTilemap.cellBounds.size.y;
 
-        Debug.Log($"TILEMAP SIZE: {GroundTilemap.cellBounds.size}");
-        Debug.Log($"TILEMAP ORIGIN: {GroundTilemap.origin}");
+        Debug.Log($"GROUND TILEMAP SIZE: {this.GroundTilemap.cellBounds.size}");
+        Debug.Log($"GROUND TILEMAP ORIGIN: {this.GroundTilemap.origin}");
+
+        // The Terrain Tilemap
+        this.TerrainTilemap = this.transform.GetChild(1).gameObject.GetComponent<Tilemap>();
+        Debug.Log($"TERRAIN TILEMAP SIZE: {this.TerrainTilemap.cellBounds.size}");
+        Debug.Log($"TERRAIN TILEMAP ORIGIN: {this.TerrainTilemap.origin}");
 
         // -- Initializing Randomness
         // For any random numbers etc to be generated, apparently an instance of the "Random" class is needed
         // https://stackoverflow.com/questions/2706500/how-do-i-generate-a-random-int-number
         this.random = new System.Random();
+
+        // -- Loading the tile 2D array
+        this.tiles = new Tile[this.SizeX, this.SizeY];
+        for (int x = 0; x < this.SizeX; x++)
+        {
+            for (int y = 0; y < this.SizeY; y++) 
+            {
+                this.tiles[x, y] = new Tile(true);
+            }
+        }
+        Debug.Log($"TILES ARRAY: {this.tiles}");
+        Debug.Log($"TILES[2, 3]: {this.tiles[2, 3]}");
 
         // At the end we need to set the initialization flag to true such that under normal circumstances, this method is not being called twice!
         this.isInitialized = true;
@@ -123,7 +160,8 @@ public class Map : MonoBehaviour
     public Vector2Int GetPositionMap(Vector3 positionWorld)
     {
         Vector3Int positionMap = this.GroundTilemap.WorldToCell(positionWorld);
-        return new Vector2Int(positionMap.x + this.OriginX, positionMap.y + this.OriginY);
+        // 06.08.2021: This actually had to be minus the origin coordinate and not plus
+        return new Vector2Int(positionMap.x - this.OriginX, positionMap.y - this.OriginY);
     }
 
     public Vector2Int GetRandomPositionMap()
@@ -163,11 +201,5 @@ public class Map : MonoBehaviour
     {
         Vector2Int positionMap = this.GetRandomPositionMap();
         return this.GetCellCenterWorld(positionMap);
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
     }
 }
